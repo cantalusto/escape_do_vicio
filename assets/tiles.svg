@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" shape-rendering="crispEdges">
+  <rect width="64" height="64" fill="#3b2366"/>
+  <!-- faixa superior do chão -->
+  <rect y="24" width="64" height="40" fill="#4a2c7f"/>
+  <!-- detalhes de ladrilhos -->
+  <rect x="6" y="42" width="12" height="12" fill="#5a3795"/>
+  <rect x="28" y="42" width="12" height="12" fill="#5a3795"/>
+  <rect x="50" y="42" width="12" height="12" fill="#5a3795"/>
+  <rect x="17" y="30" width="12" height="12" fill="#5a3795"/>
+  <rect x="39" y="30" width="12" height="12" fill="#5a3795"/>
+</svg>

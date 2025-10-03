@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Escape do Vício</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <!-- Tela Inicial -->
+      <section id="screen-home" class="screen visible">
+        <img id="home-bg" alt="Tela inicial" />
+        <div class="scanlines" aria-hidden="true"></div>
+        <div class="home-overlay">
+          <div class="menu">
+            <button class="btn" id="btn-play" aria-label="Jogar" accesskey="p">JOGAR</button>
+            <button class="btn" id="btn-instructions" aria-label="Instruções" accesskey="i">INSTRUÇÕES</button>
+            <button class="btn" id="btn-credits" aria-label="Créditos" accesskey="c">CRÉDITOS</button>
+            <button class="btn" id="btn-exit" aria-label="Sair" accesskey="s">SAIR</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tela do Jogo -->
+      <section id="screen-game" class="screen">
+        <div class="hud">
+          <div class="status">
+            <div class="hearts" id="hearts" aria-label="Vidas"></div>
+            <div class="timer" id="timer">20:00</div>
+          </div>
+          <div class="locks" id="locks"></div>
+          <button class="btn" id="btn-back-game" aria-label="Voltar" title="Voltar à tela inicial">Voltar</button>
+        </div>
+        <canvas id="gameCanvas" width="960" height="540"></canvas>
+        <div id="questionModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="qTitle">
+          <div class="modal-content" role="document">
+            <h2 id="qTitle">Pergunta</h2>
+            <p id="qText"></p>
+            <div id="qOptions" class="options"></div>
+            <p id="qFeedback" class="feedback" aria-live="polite"></p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Instruções -->
+      <section id="screen-instructions" class="screen">
+        <div class="panel">
+          <h2>Instruções</h2>
+          <p>
+            Vocês estão presos dentro do ciclo da dependência do cigarro eletrônico.
+            Para escapar, encontrem as pistas, resolvam os enigmas e aprendam como
+            superar esse vício. Cada resposta correta abre um cadeado. Com os cinco
+            cadeados abertos, a saída é liberada!
+          </p>
+          <ul>
+            <li>Tempo limite: 20 minutos.</li>
+            <li>Ao se aproximar de um cadeado, uma pergunta aparecerá.</li>
+            <li>Acertando a pergunta, o personagem segue em frente.</li>
+            <li>Errou? Tente novamente — dicas aparecem para ajudar.</li>
+          </ul>
+          <button class="btn" data-nav="home">Voltar</button>
+        </div>
+      </section>
+
+      <!-- Créditos -->
+      <section id="screen-credits" class="screen">
+        <div class="panel">
+          <h2>Créditos</h2>
+          <p>
+            Jogo educativo web criado para conscientização sobre os riscos do
+            cigarro eletrônico. Design em pixel art, animações leves e foco em
+            acessibilidade.
+          </p>
+          <p>
+            Imagem da tela inicial: coloque o arquivo <code>assets/start.png</code>
+            na pasta <code>assets/</code> para que seja usado como fundo. Um
+            placeholder é exibido caso a imagem não esteja disponível.
+          </p>
+          <div class="credits-list" aria-label="Créditos detalhados">
+            <h3>AUTORES:</h3>
+            <ul>
+              <li>Francisco Sátiro da Nóbrega Júnior</li>
+              <li>Gisele Lima de Oliveira</li>
+              <li>Helton José Alves de Vasconcelos</li>
+              <li>Isabele Barbosa de Andrade</li>
+              <li>Jhon Kevem da Silva Davi</li>
+              <li>João Pedro Ramalho Rodrigues</li>
+            </ul>
+
+            <h3>COLABORADOR:</h3>
+            <ul>
+              <li>Lucas Cantarelli Lustosa</li>
+              <li>Pedro Henrique Duarte da Silva</li>
+            </ul>
+
+            <h3>ORIENTADORES:</h3>
+            <ul>
+              <li>Prof. Dr. Walmir Soares da Silva Júnior</li>
+              <li>Profª Dra. Betânia da Mata Ribeiro Gomes</li>
+            </ul>
+
+            <h3>Mestranda:</h3>
+            <ul>
+              <li>Enf. Flávia Alves Delgado</li>
+            </ul>
+
+            <h3>Doutorandos:</h3>
+            <ul>
+              <li>Enfª. MSc. Ana Emília Avelar</li>
+              <li>Enfª. MSc. Sheila Janaína Oliveira Araújo Lima</li>
+              <li>Enf. MSc. Amílcar Andrés Salom González</li>
+            </ul>
+
+            <h3>COORDENADORA:</h3>
+            <ul>
+              <li>Vânia Chagas da Costa</li>
+            </ul>
+          </div>
+          <button class="btn" data-nav="home">Voltar</button>
+        </div>
+      </section>
+
+      <!-- Encerramento / Fim de Jogo -->
+      <section id="screen-end" class="screen">
+        <div class="panel">
+          <h2 id="endTitle">Fim de Jogo</h2>
+          <p id="endMessage"></p>
+          <div id="certificateArea" class="certificate hidden">
+            <label for="studentName">Seu nome (opcional):</label>
+            <input id="studentName" type="text" maxlength="40" placeholder="Digite seu nome" />
+            <button class="btn" id="btn-cert">Baixar Certificado de Liberdade</button>
+          </div>
+          <div class="buttons">
+            <button class="btn" data-nav="home">Tela Inicial</button>
+            <button class="btn" id="btn-replay">Jogar Novamente</button>
+          </div>
+        </div>
+        <!-- Confetes de parabéns -->
+        <div id="endConfetti" class="confetti hidden" aria-hidden="true"></div>
+      </section>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+  </html>

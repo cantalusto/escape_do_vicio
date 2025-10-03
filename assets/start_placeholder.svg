@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a0ca3"/>
+      <stop offset="1" stop-color="#7209b7"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="800" fill="url(#g)"/>
+  <g font-family="'Press Start 2P', monospace" fill="#fff" text-anchor="middle">
+    <text x="600" y="160" font-size="80" stroke="#2a2a67" stroke-width="8">ESCAPE DO VÍCIO</text>
+    <text x="600" y="250" font-size="30" opacity="0.85">Tela inicial placeholder</text>
+  </g>
+  <!-- elementos pixelados decorativos -->
+  <g fill="#4cc9f0" opacity="0.8">
+    <rect x="120" y="540" width="80" height="60"/>
+    <rect x="260" y="520" width="80" height="80"/>
+    <rect x="400" y="540" width="80" height="60"/>
+    <rect x="540" y="520" width="80" height="80"/>
+    <rect x="680" y="540" width="80" height="60"/>
+    <rect x="820" y="520" width="80" height="80"/>
+    <rect x="960" y="540" width="80" height="60"/>
+  </g>
+  <g fill="#ffbe0b">
+    <rect x="190" y="620" width="30" height="30"/>
+    <rect x="330" y="600" width="30" height="30"/>
+    <rect x="470" y="620" width="30" height="30"/>
+    <rect x="610" y="600" width="30" height="30"/>
+    <rect x="750" y="620" width="30" height="30"/>
+    <rect x="890" y="600" width="30" height="30"/>
+  </g>
+</svg>
