@@ -36,7 +36,17 @@ html, body {
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
 /* Home */
-#screen-home { overflow: hidden; }
+#screen-home { 
+  overflow: hidden;
+  /* bordas roxas mais espessas na horizontal */
+  border-top: 6px solid var(--retro-border-mid);
+  border-bottom: 6px solid var(--retro-border-mid);
+  border-left: 8px solid var(--retro-border-mid);
+  border-right: 8px solid var(--retro-border-mid);
+  outline: 6px solid var(--retro-border-dark);
+  border-radius: 8px;
+  box-shadow: 0 14px 0 #22134a, 0 20px 36px rgba(0,0,0,.35);
+}
 #home-bg {
   position: absolute;
   inset: 0;
@@ -46,14 +56,17 @@ html, body {
   object-fit: contain;
   background: #000; /* barras pretas ao lado/acima */
   image-rendering: pixelated;
-  filter: saturate(1.15) contrast(1.05);
+  /* Mais contraste e sombra para destacar a imagem de início */
+  filter: saturate(1.22) contrast(1.08) drop-shadow(0 16px 28px rgba(0,0,0,.45));
+  box-shadow: 0 18px 36px rgba(0,0,0,.35);
   /* Encolher a imagem para não preencher completamente */
   --homeScale: .85;
   transform: scale(var(--homeScale)) translateY(0);
   transform-origin: center center;
-  animation: slowPan 18s linear infinite alternate;
+  /* Pan mais perceptível */
+  animation: slowPan 16s ease-in-out infinite alternate;
 }
-@keyframes slowPan { from { transform: scale(var(--homeScale)) translateY(-6px)} to { transform: scale(var(--homeScale)) translateY(6px)} }
+@keyframes slowPan { from { transform: scale(var(--homeScale)) translateY(-12px)} to { transform: scale(var(--homeScale)) translateY(12px)} }
 
 .home-overlay {
   position: absolute;
@@ -70,12 +83,17 @@ html, body {
   pointer-events: none;
   background: repeating-linear-gradient(
     0deg,
-    rgba(0,0,0,0.15) 0px,
-    rgba(0,0,0,0.15) 1px,
+    rgba(0,0,0,0.20) 0px,
+    rgba(0,0,0,0.20) 1px,
     transparent 2px
   );
   mix-blend-mode: multiply;
-  opacity: 0.35;
+  opacity: 0.28;
+  animation: crtFlick 2.2s ease-in-out infinite;
+}
+@keyframes crtFlick {
+  0%, 100% { opacity: .24 }
+  50% { opacity: .32 }
 }
 .title {
   font-family: 'Press Start 2P', cursive;
@@ -101,7 +119,7 @@ html, body {
   );
   box-shadow: 0 10px 0 #1b0e3d, 0 14px 24px rgba(0,0,0,.25);
   cursor: pointer;
-  transition: transform .08s ease, filter .2s ease;
+  transition: transform .14s ease, box-shadow .16s ease, filter .18s ease;
   image-rendering: pixelated;
 }
 .btn:hover { transform: translateY(-2px); filter: brightness(1.04); }
@@ -136,9 +154,22 @@ html, body {
 /* HUD */
 .hud {
   position: absolute;
-  top: 12px; left: 12px; right: 12px;
-  display: flex; justify-content: space-between; align-items: center;
+  bottom: 12px; left: 0; right: 0;
+  display: flex; flex-direction: row; align-items: center; justify-content: center;
+  gap: 16px;
   z-index: 3;
+}
+/* Tornar o botão Voltar clicável mesmo com o modal aberto */
+#btn-back-game { position: fixed; top: 16px; left: 16px; z-index: 8; }
+
+/* Botão Voltar dentro do modal de perguntas */
+.modal-back {
+  position: absolute;
+  top: 8px; right: 10px;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-width: 2px; outline-width: 3px;
+  box-shadow: 0 6px 0 #1b0e3d;
 }
 .status { display: flex; align-items: center; gap: 12px; }
 .timer {
@@ -170,7 +201,7 @@ html, body {
 /* Hearts (vidas) */
 .hearts { display: flex; gap: 4px; align-items: center; }
 .heart {
-  width: 40px; height: 40px;
+  width: 56px; height: 56px;
   background-image: url('assets/heart.png');
   background-size: contain;
   background-repeat: no-repeat;
@@ -238,6 +269,10 @@ html, body {
 .certificate.hidden { display: none; }
 .buttons { display: flex; gap: 12px; margin-top: 16px; }
 
+/* Fade-in dedicado para a tela de vitória */
+#screen-end { opacity: 0; transform: translateY(8px); }
+#screen-end.visible { opacity: 1; transform: translateY(0); transition: opacity 300ms ease-out, transform 300ms ease-out; }
+
 /* Confetes na tela de parabéns */
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 9; overflow: hidden; }
 .confetti.hidden { display: none; }
@@ -249,33 +284,20 @@ html, body {
 
 /* Utility */
 code { background: rgba(255,255,255,.1); padding: 2px 6px; border-radius: 6px; }
-/* --- Animated retro background for Home pillarbox bars --- */
-#screen-home { position: relative; overflow: hidden; }
-
-#home-bg {
-  /* Keep image contained; animate only the bars around it */
-  background-color: #000;
-  background-image:
-    radial-gradient(ellipse at center,
-      rgba(58, 12, 163, 0.30) 0%,
-      rgba(20, 18, 48, 0.70) 65%,
-      rgba(0, 0, 0, 1) 100%
-    ),
-    repeating-linear-gradient(135deg,
-      rgba(111, 61, 207, 0.15) 0 8px,
-      rgba(111, 61, 207, 0.15) 8px 16px
-    ),
-    repeating-linear-gradient(45deg,
-      rgba(201, 169, 255, 0.08) 0 6px,
-      rgba(201, 169, 255, 0.08) 6px 12px
-    );
-  background-blend-mode: screen, lighten, normal;
-  background-size: 160% 160%, 100% 200%, 200% 100%;
-  background-position: 50% 0%, 0% 0%, 0% 0%;
-  animation: homeBarsScroll 24s linear infinite;
+/* Animação sutil nos botões do menu da Home */
+.menu .btn {
+  animation: homeMenuFloat 3200ms ease-in-out infinite;
+  will-change: transform, box-shadow, filter;
 }
-
-@keyframes homeBarsScroll {
-  0%   { background-position: 50% 0%, 0% 0%, 0% 0%; }
-  100% { background-position: 50% 100%, 0% 120%, 120% 0%; }
+.menu .btn:nth-child(2) { animation-delay: .2s; }
+.menu .btn:nth-child(3) { animation-delay: .4s; }
+.menu .btn:nth-child(4) { animation-delay: .6s; }
+@keyframes homeMenuFloat {
+  0%, 100% { transform: translateY(0); filter: brightness(1); }
+  50% { transform: translateY(-6px); filter: brightness(1.08); }
+}
+.menu .btn:hover {
+  animation-play-state: paused;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 0 #1b0e3d, 0 0 16px rgba(255, 190, 11, .6);
 }

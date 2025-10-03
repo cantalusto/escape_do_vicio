@@ -103,6 +103,12 @@
     message: 'Obrigado por jogar! Volte quando quiser.'
   }));
   Array.from(document.querySelectorAll('[data-nav="home"]')).forEach(b => b.addEventListener('click', () => showScreen('home')));
+  // Som de clique para todos os botões (inclui dinâmicos com classe .btn)
+  document.addEventListener('click', (ev) => {
+    const el = ev.target.closest('button, .btn, [role="button"]');
+    if (!el) return; if (el.disabled || el.getAttribute('disabled') !== null) return;
+    playUiClick();
+  });
   // Botão Voltar da tela de jogo: para o loop e retorna à Home
   const backBtn = document.getElementById('btn-back-game');
   if (backBtn) {
@@ -110,6 +116,19 @@
       try { cancelAnimationFrame(rafId); } catch(_) {}
       running = false;
       showScreen('home');
+      try { stopMusic(); } catch(_) {}
+    });
+  }
+  // Botão Voltar dentro do modal de pergunta
+  const modalBackBtn = document.getElementById('btn-modal-back');
+  if (modalBackBtn) {
+    modalBackBtn.addEventListener('click', () => {
+      try { cancelAnimationFrame(rafId); } catch(_) {}
+      running = false;
+      const modal = document.getElementById('questionModal');
+      if (modal) modal.classList.add('hidden');
+      showScreen('home');
+      try { stopMusic(); } catch(_) {}
     });
   }
 
@@ -330,6 +349,8 @@
 
   // Sons via WebAudio
   let audioCtx = null; let lastStepAt = 0;
+  // Trilha sonora retro
+  let musicGain = null, musicOn = false, musicIntervals = [];
   function ensureAudio() {
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -360,6 +381,72 @@
   function playWin() {
     [440, 660, 880, 990].forEach((f, i) => setTimeout(() => playTone({ freq: f, dur: 0.18, type: 'sawtooth', vol: 0.06 }), i*140));
   }
+  // Fanfarras curtas na tela de vitória
+  function playVictoryFanfare() {
+    ensureAudio();
+    const seq = [
+      { freq: 523.25, dur: 0.16, type: 'triangle', vol: 0.08 }, // C5
+      { freq: 659.25, dur: 0.18, type: 'triangle', vol: 0.08 }, // E5
+      { freq: 783.99, dur: 0.20, type: 'triangle', vol: 0.08 }, // G5
+      { freq: 1046.50, dur: 0.26, type: 'sawtooth', vol: 0.07 } // C6
+    ];
+    seq.forEach((s, i) => setTimeout(() => playTone(s), i * 160));
+  }
+  // Efeito sonoro de clique de UI
+  function playUiClick() {
+    ensureAudio();
+    playTone({ freq: 700, dur: 0.06, type: 'square', vol: 0.06 });
+    setTimeout(() => playTone({ freq: 1000, dur: 0.04, type: 'triangle', vol: 0.05 }), 40);
+  }
+  // Música retro de fundo (loop simples com melodia e baixo)
+  function startMusic() {
+    ensureAudio();
+    if (musicOn) return; musicOn = true;
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = 0.30;
+    musicGain.connect(audioCtx.destination);
+
+    const tempo = 120; // BPM
+    const q = 60 / tempo; // duração de uma semínima em segundos
+
+    function playMusicNote(freq, dur, type = 'square', vol = 0.08) {
+      const t = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator(); osc.type = type; osc.frequency.setValueAtTime(freq, t);
+      const g = audioCtx.createGain(); g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(g); g.connect(musicGain);
+      osc.start(t); osc.stop(t + dur);
+    }
+    const semitone = (base, n) => base * Math.pow(2, n / 12);
+    // Progressão clássica de chiptune: C, Am, F, G (4 compassos)
+    const prog = [
+      { lead: 261.63, bass: 130.81 }, // C4 / C3
+      { lead: 220.00, bass: 110.00 }, // A3 / A2
+      { lead: 349.23, bass: 174.61 }, // F4 / F3
+      { lead: 392.00, bass: 196.00 }  // G4 / G3
+    ];
+    const arp = [0, 4, 7, 12]; // arpejo: tônica, terça, quinta, oitava
+    let step = 0;
+    musicIntervals.push(setInterval(() => {
+      step++;
+      const chord = prog[Math.floor((step - 1) / 4) % prog.length];
+      // Lead: nota do arpejo por batida
+      const leadFreq = semitone(chord.lead, arp[(step - 1) % arp.length]);
+      playMusicNote(leadFreq, q * 0.85, 'square', 0.07);
+      // Bass: a cada duas batidas, reforça a tônica
+      if ((step % 2) === 1) {
+        playMusicNote(chord.bass, q * 0.45, 'triangle', 0.06);
+      }
+      // Hi-hat: clique curto por batida para ritmo
+      playMusicNote(2000, q * 0.03, 'square', 0.03);
+    }, q * 1000));
+  }
+  function stopMusic() {
+    musicOn = false;
+    musicIntervals.forEach(id => clearInterval(id));
+    musicIntervals = [];
+    if (musicGain) { try { musicGain.disconnect(); } catch(_) {} musicGain = null; }
+  }
 
   const WORLD = {
     width: 1800,
@@ -374,7 +461,8 @@
     x: 1700,
     active: false,
     angle: 0,    // ângulo de abertura (radianos)
-    opened: false
+    opened: false,
+    triggerDistance: 38 // distância para disparar vitória ao cruzar
   };
   // Confetes de celebração
   let confetti = [];
@@ -448,12 +536,14 @@
     startTimestamp = Date.now();
     timeLeftMs = 20 * 60 * 1000; // reset timer
     resetLocks();
+    startMusic();
     loop();
   }
 
   function endGame({ win, title, message }) {
     cancelAnimationFrame(rafId);
     running = false;
+    stopMusic();
     document.getElementById('endTitle').textContent = title || (win ? 'Parabéns!' : 'Tempo Esgotado');
     document.getElementById('endMessage').textContent = message || (win ?
       'Muito bem! Vocês encontraram as ferramentas para escapar do vício. Estão livres!' :
@@ -461,7 +551,7 @@
     const cert = document.getElementById('certificateArea');
     cert.classList.toggle('hidden', !win);
     showScreen('end');
-    if (win) { showEndConfetti(); }
+    if (win) { showEndConfetti(); playVictoryFanfare(); }
   }
 
   // Confetes na tela de parabéns (overlay DOM)
@@ -536,20 +626,12 @@
     player.walkingFrame = (player.walkingFrame + 1) % 20;
     player.state = 'running';
     playStep();
-    // Checar porta se ativa
-    if (DOOR.active && !DOOR.opened && DOOR.x - player.x <= 38) {
-      // abre porta e celebra
-      DOOR.opened = true;
-      player.state = 'standing';
-      spawnConfetti(DOOR.x - cameraX, WORLD.groundY - 40);
-      // animação de abertura: aumenta ângulo aos poucos
-      const openAnim = () => {
-        DOOR.angle = Math.min(DOOR.angle + 0.06, -0.6);
-        if (DOOR.angle > -0.6) requestAnimationFrame(openAnim);
-      }; openAnim();
-      setTimeout(() => {
-        endGame({ win: true, title: 'Liberdade Conquistada!', message: 'Você encontrou a saída!' });
-      }, 2400);
+    // Checar porta: vitória automática ao cruzar (ajustada para o layout)
+    if (DOOR.active && DOOR.x - player.x <= DOOR.triggerDistance) {
+      try { cancelAnimationFrame(rafId); } catch(_) {}
+      running = false;
+      endGame({ win: true, title: 'Liberdade Conquistada!', message: 'Você encontrou a saída!' });
+      return;
     }
     cameraX = Math.max(0, Math.min(player.x - canvas.width / 2 + 100, WORLD.width - canvas.width));
     draw();
@@ -606,6 +688,20 @@
         }
         ctx.restore();
       }
+      // 3ª passada: adicionar blur suave nas bordas laterais para parallax mais natural
+      // cria faixas nas laterais e redesenha o fundo com filtro de blur apenas nessas áreas
+      const edgeW = Math.max(12, Math.floor(canvas.width * 0.02));
+      ctx.save();
+      ctx.filter = 'blur(3px)';
+      ctx.globalAlpha = 0.65;
+      ctx.beginPath();
+      ctx.rect(0, 0, edgeW, canvas.height);
+      ctx.rect(canvas.width - edgeW, 0, edgeW, canvas.height);
+      ctx.clip();
+      for (let x of positions) {
+        ctx.drawImage(walkingBG, 0, 0, natW, natH, x, 0, tileW, canvas.height);
+      }
+      ctx.restore();
     } else if (tileReady) {
       const tileW = 64;
       const startX = -((cameraX % tileW));
@@ -726,6 +822,26 @@
 
   // Certificado
   document.getElementById('btn-replay').addEventListener('click', () => { showScreen('home'); });
+  // Compartilhar conquista
+  const shareBtn = document.getElementById('btn-share');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      const data = {
+        title: 'Liberdade Conquistada!',
+        text: 'Acabei de escapar do vício neste jogo educativo! Venha tentar também.',
+        url: location.href
+      };
+      if (navigator.share) {
+        try { await navigator.share(data); } catch(_) {}
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        try { await navigator.clipboard.writeText(data.url); alert('Link copiado para a área de transferência!'); } catch(_) {
+          alert('Compartilhe este link: ' + data.url);
+        }
+      } else {
+        alert('Compartilhe este link: ' + data.url);
+      }
+    });
+  }
   document.getElementById('btn-cert').addEventListener('click', () => {
     const name = (document.getElementById('studentName').value || '').trim();
     const w = 1000, h = 700;
@@ -758,7 +874,7 @@
     Escape: () => {
       const homeBtn = document.querySelector('[data-nav="home"]');
       const visible = Array.from(document.querySelectorAll('.screen')).find(s => s.classList.contains('visible') && s.id !== 'screen-home');
-      if (homeBtn && visible) homeBtn.click();
+      if (homeBtn && visible) { try { stopMusic(); } catch(_) {} homeBtn.click(); }
     }
   };
   document.addEventListener('keydown', (e)=>{ const fn = map[e.key]; if (fn) fn(); });
