@@ -1,0 +1,31 @@
+/* Responsividade Mobile */
+@media (max-width: 600px) {
+  /* Home */
+  .home-overlay { bottom: 48px; width: 92vw; }
+  .menu { grid-template-columns: 1fr; gap: 10px; }
+  .menu .btn { width: 100%; }
+  .btn { padding: 12px 14px; font-size: 14px; }
+  .title { font-size: clamp(20px, 7vw, 40px); }
+
+  /* Canvas e HUD */
+  #gameCanvas { width: 98vw; }
+  .hud { gap: 12px; bottom: 12px; flex-wrap: wrap; }
+  .status { gap: 10px; }
+  .timer { padding: 8px 12px; font-size: 14px; }
+  .locks { gap: 8px; }
+  .lock { width: 32px; height: 32px; }
+  .hearts { gap: 6px; }
+  .heart { width: 44px; height: 44px; }
+
+  /* Painéis */
+  .panel { width: 92vw; padding: 16px; }
+  #screen-credits .panel, #screen-instructions .panel { width: 92vw; max-height: 72vh; }
+
+  /* Modal */
+  .modal { padding-top: 1vh; }
+  .modal-content { width: min(92vw, 460px); }
+
+  /* Encerramento */
+  .certificate { gap: 8px; }
+  .buttons { gap: 10px; flex-wrap: wrap; }
+}

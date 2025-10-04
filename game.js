@@ -977,9 +977,18 @@
 (function(){
   const canvas = document.getElementById('gameCanvas');
   function resize(){
-    const targetW = Math.min(1000, Math.floor(window.innerWidth * 0.95));
-    const targetH = Math.min(Math.floor(window.innerHeight * 0.7), Math.floor(targetW * 9/16));
     const ratio = window.devicePixelRatio || 1;
+    const isPortrait = window.innerHeight > window.innerWidth;
+    let targetW, targetH;
+    if (isPortrait) {
+      // Mobile retrato: privilegiar altura para melhorar jogabilidade
+      targetW = Math.min(1000, Math.floor(window.innerWidth * 0.98));
+      targetH = Math.floor(window.innerHeight * 0.82);
+    } else {
+      // Paisagem/desktop: manter proporção mais larga (16:9)
+      targetW = Math.min(1000, Math.floor(window.innerWidth * 0.95));
+      targetH = Math.min(Math.floor(window.innerHeight * 0.75), Math.floor(targetW * 9/16));
+    }
     canvas.style.width = targetW + 'px';
     canvas.style.height = targetH + 'px';
     canvas.width = Math.floor(targetW * ratio);
