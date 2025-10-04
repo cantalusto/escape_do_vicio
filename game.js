@@ -88,6 +88,8 @@
   function showScreen(key) {
     Object.values(screens).forEach(s => s.classList.remove('visible'));
     screens[key].classList.add('visible');
+    // Oculta partículas se sair da tela de prêmio
+    if (key !== 'end') { stopEndParticles(); }
   }
 
   // Navegação básica
@@ -550,29 +552,13 @@
       'Assim como no jogo, a informação e o apoio ajudam a sair do ciclo. Tente novamente!');
     const cert = document.getElementById('certificateArea');
     cert.classList.toggle('hidden', !win);
+    const endPanel = document.querySelector('#screen-end .panel');
+    if (endPanel) { endPanel.classList.toggle('victory', !!win); }
     showScreen('end');
-    if (win) { showEndConfetti(); playVictoryFanfare(); }
+    if (win) { playVictoryFanfare(); startEndParticles(); }
   }
 
-  // Confetes na tela de parabéns (overlay DOM)
-  function showEndConfetti() {
-    const cont = document.getElementById('endConfetti');
-    if (!cont) return;
-    cont.innerHTML = '';
-    cont.classList.remove('hidden');
-    const COLORS = ['#ff6b6b', '#ffd166', '#4cc9f0', '#8cffb2', '#c9a9ff'];
-    for (let i = 0; i < 80; i++) {
-      const piece = document.createElement('div');
-      piece.className = 'piece';
-      piece.style.left = Math.floor(Math.random() * 100) + 'vw';
-      piece.style.top = '-10vh';
-      piece.style.background = COLORS[i % COLORS.length];
-      piece.style.animationDelay = (Math.random() * 0.4).toFixed(2) + 's';
-      piece.style.opacity = (0.7 + Math.random() * 0.3).toFixed(2);
-      cont.appendChild(piece);
-    }
-    setTimeout(() => { cont.classList.add('hidden'); cont.innerHTML = ''; }, 3200);
-  }
+  // Efeito: fanfarra já existente; confetes removidos
 
   function updateLocksHud() {
     Array.from(locksHud.children).forEach((el, i) => {
@@ -744,7 +730,14 @@
     if (DOOR.active && doorReady) {
       const dx = DOOR.x - cameraX;
       if (dx > -40 && dx < canvas.width + 40) {
-        const doorW = 48, doorH = 72;
+        const natW = doorSprite.naturalWidth || 48;
+        const natH = doorSprite.naturalHeight || 72;
+        // Ajuste: porta maior que o personagem, mantendo proporção
+        const playerScale = Math.max(1.5, Math.min(3.0, (canvas.clientHeight || 540) / 540 * 1.3));
+        const playerH = Math.floor(32 * playerScale);
+        const DOOR_SCALE = 1.5; // fator para aumentar a altura da porta
+        const doorH = Math.floor(playerH * DOOR_SCALE);
+        const doorW = Math.floor(doorH * (natW / Math.max(1, natH)));
         const baseY = WORLD.groundY - 8; // base da porta próxima ao chão
         ctx.save();
         // brilho pulsante da porta quando ativa (antes de abrir)
@@ -822,63 +815,143 @@
 
   // Certificado
   document.getElementById('btn-replay').addEventListener('click', () => { showScreen('home'); });
-  // Compartilhar conquista
-  const shareBtn = document.getElementById('btn-share');
-  if (shareBtn) {
-    shareBtn.addEventListener('click', async () => {
-      const data = {
-        title: 'Liberdade Conquistada!',
-        text: 'Acabei de escapar do vício neste jogo educativo! Venha tentar também.',
-        url: location.href
-      };
-      if (navigator.share) {
-        try { await navigator.share(data); } catch(_) {}
-      } else if (navigator.clipboard && navigator.clipboard.writeText) {
-        try { await navigator.clipboard.writeText(data.url); alert('Link copiado para a área de transferência!'); } catch(_) {
-          alert('Compartilhe este link: ' + data.url);
-        }
-      } else {
-        alert('Compartilhe este link: ' + data.url);
-      }
-    });
-  }
-  document.getElementById('btn-cert').addEventListener('click', () => {
-    const name = (document.getElementById('studentName').value || '').trim();
+
+  async function generateCertificate(nameInput) {
+    try { await (document.fonts?.ready || Promise.resolve()); } catch(_) {}
+    const name = (nameInput || '').trim();
     const w = 1000, h = 700;
     const cnv = document.createElement('canvas'); cnv.width = w; cnv.height = h; const c = cnv.getContext('2d');
+    // fundo e moldura
     const g = c.createLinearGradient(0,0,0,h); g.addColorStop(0,'#0d1b2a'); g.addColorStop(1,'#1b263b'); c.fillStyle = g; c.fillRect(0,0,w,h);
-    c.fillStyle = '#e0fbfc'; c.strokeStyle = '#98c1d9'; c.lineWidth = 6; c.strokeRect(40,40,w-80,h-80);
-    c.font = 'bold 44px "Press Start 2P", monospace'; c.fillText('Certificado de Liberdade', 70, 140);
-    c.font = '24px Nunito, sans-serif';
-    c.fillText('Parabéns! Você abriu os 5 cadeados e escapou do vício.', 70, 210);
-    if (name) { c.fillText('Participante: ' + name, 70, 260); }
-    c.fillText('Informação, apoio e escolhas saudáveis levam à liberdade.', 70, 310);
-    // confetes
-    for (let i = 0; i < 140; i++) {
-      c.fillStyle = ['#ffbe0b','#fb5607','#ff006e','#8338ec','#3a86ff'][i%5];
-      c.fillRect(80 + Math.random()*(w-160), 360 + Math.random()*260, 6, 12);
+    c.strokeStyle = '#98c1d9'; c.lineWidth = 6; c.strokeRect(40,40,w-80,h-80);
+    // margens e helpers
+    const MARGIN_X = 60, MARGIN_TOP = 70, MARGIN_BOTTOM = 40;
+    const MAX_W = w - MARGIN_X * 2;
+    c.textBaseline = 'top';
+    function drawWrapped(text, x, y, maxWidth, lineHeight){
+      const words = String(text).split(/\s+/);
+      let line = '';
+      for (const word of words){
+        const test = line ? line + ' ' + word : word;
+        if (c.measureText(test).width <= maxWidth){
+          line = test;
+        } else {
+          if (line) c.fillText(line, x, y);
+          y += lineHeight; line = word;
+        }
+      }
+      if (line) c.fillText(line, x, y);
+      return y + lineHeight;
     }
+
+    // título centralizado com fonte pixel e contorno (ajuste dinâmico para caber nas margens)
+    c.fillStyle = '#e0fbfc'; c.textAlign = 'center';
+    const titleText = 'Certificado de Liberdade';
+    const fontFamily = '"Press Start 2P", Arial, sans-serif';
+    let titleSize = 40;
+    function setTitleFont(sz){ c.font = `bold ${sz}px ${fontFamily}`; }
+    setTitleFont(titleSize);
+    const maxTitleWidth = MAX_W - 8; // leve folga das laterais
+    while (c.measureText(titleText).width > maxTitleWidth && titleSize > 20) {
+      titleSize -= 2; setTitleFont(titleSize);
+    }
+    const titleX = Math.floor(w/2); const titleY = MARGIN_TOP + 20;
+    c.lineWidth = 1.8; c.strokeStyle = '#2a2a67'; c.strokeText(titleText, titleX, titleY);
+    c.fillText(titleText, titleX, titleY);
+    let cursorY = titleY + (titleSize + 22);
+
+    // corpo com estilo game e quebra de linha segura dentro da moldura
+    c.textAlign = 'left'; c.font = '18px "Press Start 2P", Arial, sans-serif';
+    cursorY = drawWrapped('Parabéns! Você abriu os 5 cadeados e escapou do vício.', MARGIN_X, cursorY, MAX_W, 24);
+    const displayName = name.length > 36 ? name.slice(0, 36) + '…' : name;
+    if (displayName) {
+      cursorY = drawWrapped('Participante: ' + displayName, MARGIN_X, cursorY, MAX_W, 24);
+    }
+    cursorY = drawWrapped('Informação, apoio e escolhas saudáveis levam à liberdade.', MARGIN_X, cursorY, MAX_W, 24);
+    cursorY += 6;
+
+    // cantos em pixel para dar aparência 8-bit (decorativo, não interfere no layout)
+    c.fillStyle = '#3a0ca3';
+    const px = 40, py = 40, ps = 10; // tamanho do pixel
+    // canto superior esquerdo
+    c.fillRect(px, py, ps*3, ps);
+    c.fillRect(px, py, ps, ps*3);
+    // canto superior direito
+    c.fillRect(w-px-ps*3, py, ps*3, ps);
+    c.fillRect(w-px-ps, py, ps, ps*3);
+    // canto inferior esquerdo
+    c.fillRect(px, h-py-ps, ps*3, ps);
+    c.fillRect(px, h-py-ps*3, ps, ps*3);
+    // canto inferior direito
+    c.fillRect(w-px-ps*3, h-py-ps, ps*3, ps);
+    c.fillRect(w-px-ps, h-py-ps*3, ps, ps*3);
+
+    // fila de ícones (corações e cadeados) para gamificação — tamanhos menores
+    async function loadImg(src){
+      const img = new Image(); img.src = src;
+      if (img.decode) { await img.decode(); } else { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; }); }
+      return img;
+    }
+    try {
+      const heart = await loadImg('assets/heart.png');
+      const openLock = await loadImg('assets/openlock.png');
+      const baseY = cursorY + 6;
+      // desenhar 3 corações
+      for (let i = 0; i < 3; i++) {
+        const x = MARGIN_X + i * 36; c.drawImage(heart, x, baseY, 26, 26);
+      }
+      // desenhar 5 cadeados abertos
+      for (let i = 0; i < 5; i++) {
+        const x = MARGIN_X + 160 + i * 30; c.drawImage(openLock, x, baseY+1, 24, 24);
+      }
+      cursorY = baseY + 26 + 14;
+    } catch(_){ /* ignora se não carregar */ }
+
+    // Adicionar imagem abaixo do texto (assets/certificate.png)
+    try {
+      const img = new Image();
+      img.src = 'assets/certificate.png';
+      if (img.decode) { await img.decode(); } else {
+        await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+      }
+      let dy = cursorY;
+      let availableH = h - MARGIN_BOTTOM - dy;
+      if (availableH < 80) { dy = h - MARGIN_BOTTOM - 80; availableH = 80; }
+      const targetW = MAX_W; // respeita margens da moldura
+      const scale = Math.min(targetW / img.width, availableH / img.height);
+      const dw = Math.floor(img.width * scale);
+      const dh = Math.floor(img.height * scale);
+      const dx = Math.floor((w - dw) / 2); // centralizado
+      c.drawImage(img, dx, dy, dw, dh);
+    } catch (_) {
+      // Se a imagem falhar, apenas segue com o download do texto
+    }
+
+    // download robusto
     const url = cnv.toDataURL('image/png');
     const a = document.createElement('a');
-    a.href = url; a.download = 'certificado-liberdade.png'; a.click();
-  });
+    a.href = url; a.download = 'certificado-liberdade.png';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+
+  // Botão de certificado na tela final
+  const btnCert = document.getElementById('btn-cert');
+  if (btnCert) {
+    btnCert.addEventListener('click', () => {
+      const name = (document.getElementById('studentName').value || '').trim();
+      generateCertificate(name);
+    });
+  }
+  // Botão de certificado na Home (para testar sem jogar)
+  const btnCertHome = document.getElementById('btn-cert-home');
+  if (btnCertHome) {
+    btnCertHome.addEventListener('click', () => {
+      generateCertificate('');
+    });
+  }
 })();
 
-// Acessibilidade: atalhos de teclado para navegação rápida
-(function(){
-  const map = {
-    p: () => document.getElementById('btn-play')?.click(),
-    i: () => document.getElementById('btn-instructions')?.click(),
-    c: () => document.getElementById('btn-credits')?.click(),
-    s: () => document.getElementById('btn-exit')?.click(),
-    Escape: () => {
-      const homeBtn = document.querySelector('[data-nav="home"]');
-      const visible = Array.from(document.querySelectorAll('.screen')).find(s => s.classList.contains('visible') && s.id !== 'screen-home');
-      if (homeBtn && visible) { try { stopMusic(); } catch(_) {} homeBtn.click(); }
-    }
-  };
-  document.addEventListener('keydown', (e)=>{ const fn = map[e.key]; if (fn) fn(); });
-})();
+ 
 
 // Acessibilidade: navegação nas opções do modal por setas e Enter
 (function(){
@@ -915,3 +988,45 @@
   window.addEventListener('resize', resize);
   resize();
 })();
+  // Partículas na tela de prêmio
+  let endParticlesRAF = null;
+  function startEndParticles(){
+    const cv = document.getElementById('endParticles'); if (!cv) return;
+    const ctx = cv.getContext('2d');
+    function resize(){ cv.width = window.innerWidth; cv.height = window.innerHeight; }
+    resize();
+    cv.classList.remove('hidden');
+    const particles = [];
+    const colors = ['#ffd166','#ff6b6b','#4cc9f0','#8cffb2','#c9a9ff'];
+    for (let i = 0; i < 140; i++) {
+      particles.push({
+        x: Math.random() * cv.width,
+        y: -20 - Math.random() * 80,
+        vx: (Math.random() - 0.5) * 1.2,
+        vy: 1 + Math.random() * 2.2,
+        g: 0.03 + Math.random() * 0.03,
+        size: 2 + Math.floor(Math.random() * 3),
+        life: 220 + Math.floor(Math.random() * 100),
+        color: colors[Math.floor(Math.random() * colors.length)]
+      });
+    }
+    function tick(){
+      endParticlesRAF = requestAnimationFrame(tick);
+      ctx.clearRect(0,0,cv.width,cv.height);
+      particles.forEach(p => {
+        p.vy += p.g; p.x += p.vx; p.y += p.vy; p.life -= 1;
+        ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, p.size, p.size);
+      });
+    }
+    tick();
+    // encerra automaticamente após alguns segundos
+    setTimeout(() => stopEndParticles(), 4500);
+    window.addEventListener('resize', resize);
+  }
+  function stopEndParticles(){
+    const cv = document.getElementById('endParticles'); if (!cv) return;
+    try { cancelAnimationFrame(endParticlesRAF); } catch(_) {}
+    endParticlesRAF = null;
+    cv.classList.add('hidden');
+    const ctx = cv.getContext('2d'); ctx.clearRect(0,0,cv.width,cv.height);
+  }

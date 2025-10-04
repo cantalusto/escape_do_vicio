@@ -17,10 +17,10 @@
         <div class="scanlines" aria-hidden="true"></div>
         <div class="home-overlay">
           <div class="menu">
-            <button class="btn" id="btn-play" aria-label="Jogar" accesskey="p">JOGAR</button>
-            <button class="btn" id="btn-instructions" aria-label="Instruções" accesskey="i">INSTRUÇÕES</button>
-            <button class="btn" id="btn-credits" aria-label="Créditos" accesskey="c">CRÉDITOS</button>
-            <button class="btn" id="btn-exit" aria-label="Sair" accesskey="s">SAIR</button>
+            <button class="btn" id="btn-play" aria-label="Jogar">JOGAR</button>
+            <button class="btn" id="btn-instructions" aria-label="Instruções">INSTRUÇÕES</button>
+            <button class="btn" id="btn-credits" aria-label="Créditos">CRÉDITOS</button>
+            <button class="btn" id="btn-exit" aria-label="Sair">SAIR</button>
           </div>
         </div>
       </section>
@@ -51,17 +51,27 @@
       <section id="screen-instructions" class="screen">
         <div class="panel">
           <h2>Instruções</h2>
-          <p>
-            Vocês estão presos dentro do ciclo da dependência do cigarro eletrônico.
-            Para escapar, encontrem as pistas, resolvam os enigmas e aprendam como
-            superar esse vício. Cada resposta correta abre um cadeado. Com os cinco
-            cadeados abertos, a saída é liberada!
-          </p>
+          <h3>REGRAS DO JOGO</h3>
           <ul>
-            <li>Tempo limite: 20 minutos.</li>
-            <li>Ao se aproximar de um cadeado, uma pergunta aparecerá.</li>
-            <li>Acertando a pergunta, o personagem segue em frente.</li>
-            <li>Errou? Tente novamente — dicas aparecem para ajudar.</li>
+            <li>Sistema de múltipla escolha.</li>
+            <li>Cada resposta correta abre um cadeado.</li>
+            <li>Feedback imediato após cada resposta.</li>
+            <li>Você possui 3 vidas. Se errar 3 perguntas diferentes, você perde e tem que começar do início.</li>
+            <li>O grupo vence ao abrir os 5 cadeados.</li>
+          </ul>
+
+          <h3>DINÂMICA DO JOGO</h3>
+          <ul>
+            <li>Resolver enigmas em sequência.</li>
+            <li>Tempo máximo: 20 minutos.</li>
+            <li>Cada enigma corresponde a 1 cadeado.</li>
+          </ul>
+
+          <h3>OBJETIVOS DO JOGO</h3>
+          <ul>
+            <li>Abrir todos os cadeados e se livrar do vício.</li>
+            <li>Resolver corretamente os enigmas para desbloquear as saídas.</li>
+            <li>Escapar da sala simbólica do vício ao abrir todos os cadeados.</li>
           </ul>
           <button class="btn" data-nav="home">Voltar</button>
         </div>
@@ -138,11 +148,10 @@
           <div class="buttons">
             <button class="btn" data-nav="home">Tela Inicial</button>
             <button class="btn" id="btn-replay">Jogar Novamente</button>
-            <button class="btn" id="btn-share">Compartilhar conquista</button>
           </div>
         </div>
-        <!-- Confetes de parabéns -->
-        <div id="endConfetti" class="confetti hidden" aria-hidden="true"></div>
+        <!-- Partículas na tela de prêmio -->
+        <canvas id="endParticles" class="particles hidden" aria-hidden="true"></canvas>
       </section>
     </div>
 

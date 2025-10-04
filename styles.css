@@ -48,9 +48,9 @@ html, body {
   inset: 0;
   width: 100%;
   height: 100%;
-  /* Letterbox/Pillarbox retro: mantém proporção e cria barras pretas */
-  object-fit: contain;
-  background: #000; /* barras pretas ao lado/acima */
+  /* Preencher sem barras pretas */
+  object-fit: cover;
+  background: transparent;
   image-rendering: pixelated;
   /* Mais contraste e sombra para destacar a imagem de início */
   filter: saturate(1.22) contrast(1.08) drop-shadow(0 16px 28px rgba(0,0,0,.45));
@@ -142,6 +142,12 @@ html, body {
 
 /* Créditos: limitar largura/altura e permitir rolagem interna */
 #screen-credits .panel {
+  width: min(760px, 92vw);
+  max-height: min(75vh, 720px);
+  overflow: auto;
+}
+/* Instruções: aplicar mesmas regras dos Créditos para não sair da tela */
+#screen-instructions .panel {
   width: min(760px, 92vw);
   max-height: min(75vh, 720px);
   overflow: auto;
@@ -273,6 +279,14 @@ html, body {
 #screen-end { opacity: 0; transform: translateY(8px); }
 #screen-end.visible { opacity: 1; transform: translateY(0); transition: opacity 300ms ease-out, transform 300ms ease-out; }
 
+/* Limites e efeito visual no painel da tela final */
+#screen-end .panel { width: min(760px, 92vw); max-height: min(75vh, 720px); overflow: auto; }
+#screen-end .panel.victory { animation: victoryPulse 2400ms ease-in-out infinite; }
+@keyframes victoryPulse {
+  0%, 100% { box-shadow: 0 12px 0 #22134a, 0 18px 32px rgba(0,0,0,.35); filter: brightness(1); }
+  50% { box-shadow: 0 12px 0 #3a0ca3, 0 22px 38px rgba(0,0,0,.5); filter: brightness(1.05); }
+}
+
 /* Confetes na tela de parabéns */
 .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 9; overflow: hidden; }
 .confetti.hidden { display: none; }
@@ -281,6 +295,10 @@ html, body {
   0% { transform: translateY(-20vh) rotate(0deg); }
   100% { transform: translateY(100vh) rotate(540deg); }
 }
+
+/* Partículas na tela de prêmio (overlay) */
+.particles { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 8; }
+.particles.hidden { display: none; }
 
 /* Utility */
 code { background: rgba(255,255,255,.1); padding: 2px 6px; border-radius: 6px; }
