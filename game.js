@@ -136,7 +136,8 @@
 
   // Timer
   const timerEl = document.getElementById('timer');
-  let timeLeftMs = 20 * 60 * 1000; // 20 min
+  const GAME_DURATION_MS = 10 * 60 * 1000; // 10 min
+  let timeLeftMs = GAME_DURATION_MS;
 
   // Perguntas
   const QUESTIONS = [
@@ -173,7 +174,7 @@
     },
     {
       title: 'Enigma 4 – Pressão Social',
-      text: 'Complete: “Muitos adolescentes começam a usar cigarro eletrônico porque ___________.”',
+      text: 'Desafio: complete a frase: “Muitos adolescentes começam a usar cigarro eletrônico porque ___________.”',
       options: [
         'Porque médicos recomendam para aliviar o estresse.',
         'Porque os médicos recomendam para aliviar o estresse.',
@@ -181,7 +182,7 @@
         'Porque sofrem influência de amigos ou querem se encaixar no grupo.'
       ],
       correct: 3,
-      success: 'Reconhecer a pressão social é parte da fuga. Escolha por você!'
+      success: 'Reconhecer a pressão social é parte da fuga.'
     },
     {
       title: 'Enigma 5 – A Saída (Estratégias de Superação)',
@@ -268,6 +269,29 @@
     initHeartsHud();
     // iniciar animação de fala enquanto a pergunta estiver ativa
     startTalkingAnimation();
+    // Pausar monstro e iniciar countdown de 30s no modal
+    monsterThreatMs = 30000;
+    MONSTER.chasing = false;
+    MONSTER.pausedUntil = performance.now() + monsterThreatMs;
+    // garantir que o monstro apareça parado próximo ao jogador
+    MONSTER.visible = true;
+    MONSTER.x = Math.max(0, player.x - 160);
+    const countdownEl = document.createElement('div');
+    countdownEl.id = 'monsterCountdown';
+    countdownEl.style.marginTop = '8px';
+    countdownEl.style.color = '#ffd166';
+    countdownEl.textContent = 'Monstro retoma em 30s';
+    try { qText.insertAdjacentElement('afterend', countdownEl); } catch(_) {}
+    if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); }
+    monsterCountdownInterval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((MONSTER.pausedUntil - performance.now()) / 1000));
+      countdownEl.textContent = `Monstro retoma em ${remaining}s`;
+      if (remaining <= 0) {
+        clearInterval(monsterCountdownInterval);
+        monsterCountdownInterval = null;
+        MONSTER.chasing = true;
+      }
+    }, 250);
     q.options.forEach((opt, i) => {
       const b = document.createElement('button');
       b.className = 'btn';
@@ -295,9 +319,14 @@
             // parar animação de fala ao fechar
             stopTalkingAnimation();
             qModal.classList.add('hidden');
-            // bônus de tempo para leitura da explicação da resposta
-            timeLeftMs = Math.min(timeLeftMs + 15000, 20 * 60 * 1000);
             playUnlock();
+            // retomar movimento
+            questionActive = false;
+            activeQuestionIndex = -1;
+            // encerrar countdown e remover indicador
+            if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); monsterCountdownInterval = null; }
+            try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
+            MONSTER.chasing = true; MONSTER.pausedUntil = 0;
             onCorrect();
           });
           actions.appendChild(cont);
@@ -336,6 +365,20 @@
   // Sprite da porta de saída
   const doorSprite = new Image(); doorSprite.src = 'assets/door.png';
   let doorReady = false; doorSprite.onload = () => { doorReady = true; };
+
+  // Sprites do monstro (parado e correndo)
+  const monsterSprites = {
+    stand: new Image(),
+    walk1: new Image(),
+    walk2: new Image()
+  };
+  const monsterReady = { stand: false, walk1: false, walk2: false };
+  monsterSprites.stand.src = 'assets/standind_monster.png';
+  monsterSprites.walk1.src = 'assets/walking_monster01.png';
+  monsterSprites.walk2.src = 'assets/walking_monster02.png';
+  monsterSprites.stand.onload = () => { monsterReady.stand = true; };
+  monsterSprites.walk1.onload = () => { monsterReady.walk1 = true; };
+  monsterSprites.walk2.onload = () => { monsterReady.walk2 = true; };
 
   // Novo conjunto de sprites do personagem
   const spritesReady = { stand: false, talk: false, r0: false, r1: false, r2: false, r3: false, r4: false };
@@ -506,8 +549,29 @@
     runFrame: 0
   };
 
+  // Monstro perseguidor
+  const MONSTER = {
+    x: 0,
+    w: 56,
+    h: 56,
+    speed: 1.2,
+    chasing: true,
+    pausedUntil: 0,
+    visible: false,
+    frameTick: 0
+  };
+  function resetMonster(){
+    MONSTER.x = Math.max(0, player.x - 320);
+    MONSTER.chasing = false;
+    MONSTER.pausedUntil = performance.now() + 7000; // atraso inicial de ~7s
+    MONSTER.visible = false;
+    MONSTER.frameTick = 0;
+  }
+
   // Animação de fala enquanto o modal está aberto
   let talkInterval = null;
+  let monsterCountdownInterval = null;
+  let monsterThreatMs = 0;
   function startTalkingAnimation(){
     player.state = 'talking';
     if (talkInterval) clearInterval(talkInterval);
@@ -524,6 +588,8 @@
   let cameraX = 0;
   let running = false;
   let startTimestamp = 0;
+  let questionActive = false;
+  let activeQuestionIndex = -1;
 
   function startGame() {
     ensureAudio();
@@ -533,10 +599,11 @@
     livesLeft = MAX_LIVES;
     initHeartsHud();
     player.x = 40; player.walkingFrame = 0;
+    resetMonster();
     cameraX = 0;
     running = true;
     startTimestamp = Date.now();
-    timeLeftMs = 20 * 60 * 1000; // reset timer
+    timeLeftMs = GAME_DURATION_MS; // reset timer
     resetLocks();
     startMusic();
     loop();
@@ -570,41 +637,96 @@
     rafId = requestAnimationFrame(loop);
     const now = Date.now();
     const elapsed = now - startTimestamp;
-    timeLeftMs = Math.max(0, 20 * 60 * 1000 - elapsed);
+    timeLeftMs = Math.max(0, GAME_DURATION_MS - elapsed);
     const mm = String(Math.floor(timeLeftMs / 60000)).padStart(2, '0');
     const ss = String(Math.floor((timeLeftMs % 60000) / 1000)).padStart(2, '0');
     timerEl.textContent = `${mm}:${ss}`;
     if (timeLeftMs <= 0) { endGame({ win: false }); return; }
+
+    // Se uma pergunta está ativa, manter o loop para atualizar o relógio,
+    // mas não mover o jogador
+    if (questionActive) {
+      // mesmo com pergunta ativa, atualizar monstro
+      if (!MONSTER.chasing && MONSTER.pausedUntil && performance.now() >= MONSTER.pausedUntil) {
+        MONSTER.chasing = true;
+        MONSTER.pausedUntil = 0;
+        MONSTER.visible = true;
+      }
+      if (MONSTER.chasing) {
+        const dir = Math.sign(player.x - MONSTER.x);
+        MONSTER.x = Math.max(0, Math.min(WORLD.width, MONSTER.x + dir * MONSTER.speed));
+        MONSTER.frameTick = (MONSTER.frameTick + 1) % 1000;
+      }
+      const pLeftQA = player.x - 16;
+      const pRightQA = player.x + 16;
+      const mLeftQA = MONSTER.x - MONSTER.w/2;
+      const mRightQA = MONSTER.x + MONSTER.w/2;
+      // Colisão somente quando o monstro estiver visível ou em perseguição
+      if ((MONSTER.visible || MONSTER.chasing) && mRightQA > pLeftQA && mLeftQA < pRightQA) {
+        try { cancelAnimationFrame(rafId); } catch(_) {}
+        running = false;
+        endGame({ win: false, title: 'Você foi alcançado!', message: 'O monstro encostou no personagem.' });
+        return;
+      }
+      draw();
+      return;
+    }
+
+    // Ativar monstro após atraso inicial ou fim de pausa
+    if (!MONSTER.chasing && MONSTER.pausedUntil && performance.now() >= MONSTER.pausedUntil) {
+      MONSTER.chasing = true;
+      MONSTER.pausedUntil = 0;
+      MONSTER.visible = true;
+    }
+    // Atualizar monstro (persegue o jogador)
+    if (MONSTER.chasing) {
+      const dir = Math.sign(player.x - MONSTER.x);
+      MONSTER.x = Math.max(0, Math.min(WORLD.width, MONSTER.x + dir * MONSTER.speed));
+      MONSTER.frameTick = (MONSTER.frameTick + 1) % 1000;
+    }
+    // Colisão monstro x jogador (hitbox simples na horizontal)
+    const pLeft = player.x - 16;
+    const pRight = player.x + 16;
+    const mLeft = MONSTER.x - MONSTER.w/2;
+    const mRight = MONSTER.x + MONSTER.w/2;
+    // Só colide se o monstro estiver visível ou perseguindo
+    if ((MONSTER.visible || MONSTER.chasing) && mRight > pLeft && mLeft < pRight) {
+      try { cancelAnimationFrame(rafId); } catch(_) {}
+      running = false;
+      endGame({ win: false, title: 'Você foi alcançado!', message: 'O monstro encostou no personagem.' });
+      return;
+    }
 
     // Movimento
     const nextX = player.x + player.speed;
     // Verificar lock à frente
     const nextLockIndex = WORLD.locks.findIndex((lx, i) => !WORLD.unlocked[i] && lx - player.x <= 40);
     if (nextLockIndex !== -1) {
-      // Pausar e perguntar
+      // Ativar pergunta sem pausar o timer
       running = false;
-      cancelAnimationFrame(rafId);
       player.state = 'standing';
-      askQuestion(nextLockIndex, () => {
-        WORLD.unlocked[nextLockIndex] = true;
-        updateLocksHud();
-        if (WORLD.unlocked.every(Boolean)) {
-          // habilita porta; jogador deve andar até a saída
-          DOOR.active = true;
-          playWin();
-          // segue o jogo até alcançar a porta
-          running = true;
-          startTimestamp = Date.now() - (20 * 60 * 1000 - timeLeftMs);
-          player.state = 'running';
+      if (!questionActive) {
+        questionActive = true;
+        activeQuestionIndex = nextLockIndex;
+        askQuestion(nextLockIndex, () => {
+          WORLD.unlocked[nextLockIndex] = true;
+          updateLocksHud();
+          if (WORLD.unlocked.every(Boolean)) {
+            // habilita porta; jogador deve andar até a saída
+            DOOR.active = true;
+            playWin();
+            // segue o jogo até alcançar a porta
+            running = true;
+            player.state = 'running';
           loop();
-        } else {
-          // retomar
-          running = true;
-          startTimestamp = Date.now() - (20 * 60 * 1000 - timeLeftMs);
-          player.state = 'running';
+          } else {
+            // retomar
+            running = true;
+            player.state = 'running';
           loop();
-        }
-      });
+          }
+        });
+      }
       return;
     }
 
@@ -769,6 +891,31 @@
         ctx.fillRect(Math.floor(p.x), Math.floor(p.y), p.size, p.size);
       });
       ctx.restore();
+    }
+
+    // monstro perseguidor
+    const mx = MONSTER.x - cameraX;
+    if ((MONSTER.visible || MONSTER.chasing) && mx > -50 && mx < canvas.width + 50) {
+      const scale = Math.max(1.5, Math.min(3.0, (canvas.clientHeight || 540) / 540 * 1.3));
+      const mw = Math.floor(56 * scale);
+      const mh = Math.floor(56 * scale);
+      const my = (WORLD.groundY - 32) - mh;
+      let mImg = null;
+      let ready = false;
+      if (!MONSTER.chasing) {
+        mImg = monsterSprites.stand; ready = monsterReady.stand;
+      } else {
+        const useWalk1 = (MONSTER.frameTick % 20) < 10;
+        mImg = useWalk1 ? monsterSprites.walk1 : monsterSprites.walk2;
+        ready = useWalk1 ? monsterReady.walk1 : monsterReady.walk2;
+      }
+      if (ready) {
+        ctx.drawImage(mImg, Math.floor(mx - mw/2), Math.floor(my), mw, mh);
+      } else {
+        // fallback simples
+        ctx.fillStyle = '#d84b4b';
+        ctx.fillRect(Math.floor(mx - mw/2), Math.floor(my), mw, mh);
+      }
     }
 
     // player (sprite simples pixel art)
