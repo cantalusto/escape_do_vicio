@@ -176,7 +176,7 @@
       title: 'Enigma 4 – Pressão Social',
       text: 'Desafio: complete a frase: “Muitos adolescentes começam a usar cigarro eletrônico porque ___________.”',
       options: [
-        'Porque médicos recomendam para aliviar o estresse.',
+        'Porque melhoram a saúde bucal.',
         'Porque os médicos recomendam para aliviar o estresse.',
         'Porque ajuda a melhorar o desempenho esportivo.',
         'Porque sofrem influência de amigos ou querem se encaixar no grupo.'
