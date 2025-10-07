@@ -543,7 +543,7 @@
     y: WORLD.groundY - 32,
     w: 26,
     h: 32,
-    speed: 1.6,
+    speed: 1.3,
     walkingFrame: 0,
     state: 'running',
     runFrame: 0
