@@ -62,6 +62,12 @@
           // fechar modal e encerrar
           stopTalkingAnimation();
           qModal.classList.add('hidden');
+          // Limpar countdown do monstro
+          if (monsterCountdownInterval) { 
+            clearInterval(monsterCountdownInterval); 
+            monsterCountdownInterval = null; 
+          }
+          try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
           try { cancelAnimationFrame(rafId); } catch(_) {}
           running = false;
           endGame({
@@ -77,6 +83,12 @@
       if (livesLeft <= 0) {
         stopTalkingAnimation();
         qModal.classList.add('hidden');
+        // Limpar countdown do monstro
+        if (monsterCountdownInterval) { 
+          clearInterval(monsterCountdownInterval); 
+          monsterCountdownInterval = null; 
+        }
+        try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
         try { cancelAnimationFrame(rafId); } catch(_) {}
         running = false;
         endGame({ win: false, title: 'Sem mais vidas', message: 'Você errou 3 perguntas. Volte ao início e tente novamente.' });
@@ -117,6 +129,11 @@
     backBtn.addEventListener('click', () => {
       try { cancelAnimationFrame(rafId); } catch(_) {}
       running = false;
+      questionActive = false;
+      activeQuestionIndex = -1;
+      stopTalkingAnimation();
+      clearQuestionModal();
+      if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); monsterCountdownInterval = null; }
       showScreen('home');
       try { stopMusic(); } catch(_) {}
     });
@@ -127,17 +144,15 @@
     modalBackBtn.addEventListener('click', () => {
       try { cancelAnimationFrame(rafId); } catch(_) {}
       running = false;
-      const modal = document.getElementById('questionModal');
-      if (modal) modal.classList.add('hidden');
+      questionActive = false;
+      activeQuestionIndex = -1;
+      stopTalkingAnimation();
+      clearQuestionModal();
+      if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); monsterCountdownInterval = null; }
       showScreen('home');
       try { stopMusic(); } catch(_) {}
     });
   }
-
-  // Timer
-  const timerEl = document.getElementById('timer');
-  const GAME_DURATION_MS = 10 * 60 * 1000; // 10 min
-  let timeLeftMs = GAME_DURATION_MS;
 
   // Perguntas
   const QUESTIONS = [
@@ -257,12 +272,26 @@
     window.addEventListener('resize', setInitialPosition);
   }
 
+  function clearQuestionModal() {
+    if (qModal) qModal.classList.add('hidden');
+    if (qOptions) qOptions.innerHTML = '';
+    if (qFeedback) qFeedback.textContent = '';
+    // Remover botão Continuar se existir
+    const actions = qContent ? qContent.querySelector('#qActions') : null;
+    if (actions) actions.innerHTML = '';
+    // Remover countdown do monstro se existir
+    try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
+  }
+
   function askQuestion(index, onCorrect) {
     const q = QUESTIONS[index];
     qTitle.textContent = q.title;
     qText.textContent = q.text;
     qOptions.innerHTML = '';
     qFeedback.textContent = '';
+    // Limpar ações anteriores (botão Continuar)
+    const oldActions = qContent.querySelector('#qActions');
+    if (oldActions) oldActions.innerHTML = '';
     qModal.classList.remove('hidden');
     initDraggableModal();
     questionPenaltyApplied = false;
@@ -276,16 +305,32 @@
     // garantir que o monstro apareça parado próximo ao jogador
     MONSTER.visible = true;
     MONSTER.x = Math.max(0, player.x - 160);
+    
+    // Limpar countdown anterior se existir
+    if (monsterCountdownInterval) { 
+      clearInterval(monsterCountdownInterval); 
+      monsterCountdownInterval = null;
+    }
+    // Remover elemento de countdown anterior se existir
+    try { 
+      const oldCountdown = document.getElementById('monsterCountdown'); 
+      if (oldCountdown) oldCountdown.remove(); 
+    } catch(_) {}
+    
+    // Criar novo elemento de countdown
     const countdownEl = document.createElement('div');
     countdownEl.id = 'monsterCountdown';
     countdownEl.style.marginTop = '8px';
     countdownEl.style.color = '#ffd166';
     countdownEl.textContent = 'Monstro retoma em 30s';
     try { qText.insertAdjacentElement('afterend', countdownEl); } catch(_) {}
-    if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); }
+    
+    // Iniciar novo countdown
     monsterCountdownInterval = setInterval(() => {
       const remaining = Math.max(0, Math.floor((MONSTER.pausedUntil - performance.now()) / 1000));
-      countdownEl.textContent = `Monstro retoma em ${remaining}s`;
+      if (countdownEl && countdownEl.parentNode) {
+        countdownEl.textContent = `Monstro retoma em ${remaining}s`;
+      }
       if (remaining <= 0) {
         clearInterval(monsterCountdownInterval);
         monsterCountdownInterval = null;
@@ -315,6 +360,13 @@
           cont.className = 'btn';
           cont.id = 'btn-continue';
           cont.textContent = 'Continuar';
+          // Pausar o countdown do monstro ao acertar
+          if (monsterCountdownInterval) { 
+            clearInterval(monsterCountdownInterval); 
+            monsterCountdownInterval = null; 
+          }
+          // Remover o texto do countdown
+          try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
           cont.addEventListener('click', () => {
             // parar animação de fala ao fechar
             stopTalkingAnimation();
@@ -323,9 +375,6 @@
             // retomar movimento
             questionActive = false;
             activeQuestionIndex = -1;
-            // encerrar countdown e remover indicador
-            if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); monsterCountdownInterval = null; }
-            try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
             MONSTER.chasing = true; MONSTER.pausedUntil = 0;
             onCorrect();
           });
@@ -339,6 +388,9 @@
             questionPenaltyApplied = true;
             consumeLife();
           }
+          // Garantir que não há botão Continuar em respostas erradas
+          const actions = qContent.querySelector('#qActions');
+          if (actions) actions.innerHTML = '';
         }
       });
       qOptions.appendChild(b);
@@ -549,12 +601,12 @@
     runFrame: 0
   };
 
-  // Monstro perseguidor
+  // Monstro perseguidor - mesma velocidade que o player
   const MONSTER = {
     x: 0,
     w: 56,
     h: 56,
-    speed: 1.2,
+    speed: 1.3,
     chasing: true,
     pausedUntil: 0,
     visible: false,
@@ -598,12 +650,20 @@
     // resetar vidas
     livesLeft = MAX_LIVES;
     initHeartsHud();
-    player.x = 40; player.walkingFrame = 0;
+    player.x = 40; player.walkingFrame = 0; player.state = 'running';
     resetMonster();
     cameraX = 0;
     running = true;
-    startTimestamp = Date.now();
-    timeLeftMs = GAME_DURATION_MS; // reset timer
+    // Resetar estado de perguntas
+    questionActive = false;
+    activeQuestionIndex = -1;
+    // Limpar modal completamente
+    clearQuestionModal();
+    // Limpar countdown do monstro se existir
+    if (monsterCountdownInterval) { 
+      clearInterval(monsterCountdownInterval); 
+      monsterCountdownInterval = null; 
+    }
     resetLocks();
     startMusic();
     loop();
@@ -612,6 +672,13 @@
   function endGame({ win, title, message }) {
     cancelAnimationFrame(rafId);
     running = false;
+    questionActive = false;
+    activeQuestionIndex = -1;
+    stopTalkingAnimation();
+    // Limpar modal completamente
+    clearQuestionModal();
+    // Limpar countdown do monstro
+    if (monsterCountdownInterval) { clearInterval(monsterCountdownInterval); monsterCountdownInterval = null; }
     stopMusic();
     document.getElementById('endTitle').textContent = title || (win ? 'Parabéns!' : 'Tempo Esgotado');
     document.getElementById('endMessage').textContent = message || (win ?
@@ -635,15 +702,8 @@
 
   function loop() {
     rafId = requestAnimationFrame(loop);
-    const now = Date.now();
-    const elapsed = now - startTimestamp;
-    timeLeftMs = Math.max(0, GAME_DURATION_MS - elapsed);
-    const mm = String(Math.floor(timeLeftMs / 60000)).padStart(2, '0');
-    const ss = String(Math.floor((timeLeftMs % 60000) / 1000)).padStart(2, '0');
-    timerEl.textContent = `${mm}:${ss}`;
-    if (timeLeftMs <= 0) { endGame({ win: false }); return; }
 
-    // Se uma pergunta está ativa, manter o loop para atualizar o relógio,
+    // Se uma pergunta está ativa, manter o loop rodando,
     // mas não mover o jogador
     if (questionActive) {
       // mesmo com pergunta ativa, atualizar monstro
@@ -663,6 +723,12 @@
       const mRightQA = MONSTER.x + MONSTER.w/2;
       // Colisão somente quando o monstro estiver visível ou em perseguição
       if ((MONSTER.visible || MONSTER.chasing) && mRightQA > pLeftQA && mLeftQA < pRightQA) {
+        // Limpar countdown do monstro
+        if (monsterCountdownInterval) { 
+          clearInterval(monsterCountdownInterval); 
+          monsterCountdownInterval = null; 
+        }
+        try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
         try { cancelAnimationFrame(rafId); } catch(_) {}
         running = false;
         endGame({ win: false, title: 'Você foi alcançado!', message: 'O monstro encostou no personagem.' });
@@ -691,6 +757,12 @@
     const mRight = MONSTER.x + MONSTER.w/2;
     // Só colide se o monstro estiver visível ou perseguindo
     if ((MONSTER.visible || MONSTER.chasing) && mRight > pLeft && mLeft < pRight) {
+      // Limpar countdown do monstro
+      if (monsterCountdownInterval) { 
+        clearInterval(monsterCountdownInterval); 
+        monsterCountdownInterval = null; 
+      }
+      try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
       try { cancelAnimationFrame(rafId); } catch(_) {}
       running = false;
       endGame({ win: false, title: 'Você foi alcançado!', message: 'O monstro encostou no personagem.' });
@@ -699,10 +771,10 @@
 
     // Movimento
     const nextX = player.x + player.speed;
-    // Verificar lock à frente
+    // Verificar lock à frente - só se o jogo estiver rodando
     const nextLockIndex = WORLD.locks.findIndex((lx, i) => !WORLD.unlocked[i] && lx - player.x <= 40);
-    if (nextLockIndex !== -1) {
-      // Ativar pergunta sem pausar o timer
+    if (nextLockIndex !== -1 && running) {
+      // Ativar pergunta
       running = false;
       player.state = 'standing';
       if (!questionActive) {
@@ -715,16 +787,10 @@
             // habilita porta; jogador deve andar até a saída
             DOOR.active = true;
             playWin();
-            // segue o jogo até alcançar a porta
-            running = true;
-            player.state = 'running';
-          loop();
-          } else {
-            // retomar
-            running = true;
-            player.state = 'running';
-          loop();
           }
+          // retomar movimento - o loop já está rodando via requestAnimationFrame
+          running = true;
+          player.state = 'running';
         });
       }
       return;
