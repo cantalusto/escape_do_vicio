@@ -595,7 +595,7 @@
     y: WORLD.groundY - 32,
     w: 26,
     h: 32,
-    speed: 1.3,
+    speed: 2.0,
     walkingFrame: 0,
     state: 'running',
     runFrame: 0
@@ -606,7 +606,7 @@
     x: 0,
     w: 56,
     h: 56,
-    speed: 1.3,
+    speed: 2.0,
     chasing: true,
     pausedUntil: 0,
     visible: false,
