@@ -360,11 +360,14 @@
           cont.className = 'btn';
           cont.id = 'btn-continue';
           cont.textContent = 'Continuar';
-          // Pausar o countdown do monstro ao acertar
+          // Pausar completamente o countdown do monstro ao acertar
           if (monsterCountdownInterval) { 
             clearInterval(monsterCountdownInterval); 
             monsterCountdownInterval = null; 
           }
+          // Zerar o pausedUntil para prevenir reativação automática
+          MONSTER.pausedUntil = 0;
+          MONSTER.chasing = false;
           // Remover o texto do countdown
           try { const el = document.getElementById('monsterCountdown'); if (el) el.remove(); } catch(_) {}
           cont.addEventListener('click', () => {
@@ -375,7 +378,7 @@
             // retomar movimento
             questionActive = false;
             activeQuestionIndex = -1;
-            MONSTER.chasing = true; MONSTER.pausedUntil = 0;
+            MONSTER.chasing = true;
             onCorrect();
           });
           actions.appendChild(cont);
